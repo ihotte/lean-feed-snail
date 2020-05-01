@@ -9,7 +9,7 @@ See /LICENSE for more information.
 module("luci.controller.net.wol", package.seeall)
 
 function index()
-	if not require "luci.version".snail then return end
+	-- if not require "luci.version".snail then return end
 
 	entry({"admin", "network", "wol"}, form("net/wol"), _("Wake on LAN"), 90)
 	entry({"mini",  "network", "wol"}, form("net/wol"), _("Wake on LAN"), 90)

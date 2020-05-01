@@ -19,7 +19,7 @@ local PKG_MENU = "net"
 
 function index()
 	local PKG_NAME, PKG_DESC, PKG_MENU = "cloudreve", "Cloudreve", "nas"
-	if not require "luci.version".snail then return end
+	-- if not require "luci.version".snail then return end
 	if not nixio.fs.access("/etc/config/%s" % PKG_NAME) then
 		return
 	end
