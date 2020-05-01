@@ -1,0 +1,11 @@
+
+config cloudreve 'main'
+	option enabled '0'
+	option internet '0'
+
+	option user 'nobody'
+	option bind '0.0.0.0'
+	option port '8052'
+
+	option tls '0'
+

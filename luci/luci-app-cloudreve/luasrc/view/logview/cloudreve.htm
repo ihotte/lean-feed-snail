@@ -1,0 +1,82 @@
+<%+header%>
+
+<link rel="stylesheet" href="/assets/plugins/nprogress/0.2.0/nprogress.css">
+<script src="/assets/plugins/nprogress/0.2.0/nprogress.js"></script>
+
+<style title="text/css">
+	#log_text { padding: 10px; text-align: left; }
+	#log_text pre { word-break: break-all; margin: 0; }
+	.description { background-color: #33ccff; }
+	.cbi-section-descr > .cbi-button { padding: 4px 10px; }
+</style>
+
+<div class="cbi-map">
+	<h2 name="content"><%:Cloudreve%> - <%:Log Data%></h2>
+	<fieldset class="cbi-section">
+		<div class="cbi-section-descr">
+			<input id="action-clear-log" type="button" class="cbi-button" value="<%:Clear Log File%>" placeholder="<%:Clear Log File%>" />
+		</div>
+		<fieldset class="cbi-section-node">
+			<div id="log_text">
+				<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" />
+				<%:Collecting data...%>
+			</div>
+			<div style="text-align:right"><small><%:Refresh every 5 seconds.%></small></div>
+		</fieldset>
+	</fieldset>
+</div>
+
+<script type="text/javascript">//<![CDATA[
+(function ($, doc) {
+	if (typeof NProgress != "undefined") {
+		var timer = null;
+		NProgress.configure({ parent: '#maincontent', minimum: 0.00001 });
+		$('#xhr_poll_status').on('click', function (event) {
+			var running = XHR.running();
+			if (!running) {
+				clearInterval(timer);
+				NProgress.done(true);
+				NProgress.remove();
+			}
+		});
+	}
+
+	var log_elm = doc.getElementById('log_text');
+	XHR.poll(5, '<%=url("admin/nas/cloudreve/log/data")%>', null, function(x, data) {
+			if (typeof NProgress != "undefined") {
+				NProgress.set(1.0);
+				NProgress.done();
+				NProgress.start();
+				clearInterval(timer);
+				timer = setInterval(function () {
+					NProgress.inc(0.02);
+				}, 100);
+			}
+
+			if (log_elm && data) {
+				log_elm.innerHTML = String.format('<pre>%s%s%s%s</pre>',
+					'<span class="description"><%:Last 50 lines of log file:%></span><br/><br/>',
+					data.client || '<%:No log data.%>',
+					'<br/><br/><span class="description"><%:Last 50 lines of syslog:%></span><br/><br/>',
+					data.syslog || '<%:No log data.%>'
+				);
+			} else if (log_elm) {
+				log_elm.innerHTML = '<strong><%:Error get log data.%></strong>';
+			}
+		}
+	);
+
+	$("#action-clear-log").on("click", function () {
+		var $this = $(this);
+		$this.prop("disabled", true).val("<%:Processing...%>");
+		(new XHR()).get('<%=url("admin/nas/cloudreve/log/clear/client")%>', { token: '<%=token%>' }, function (x, json) {
+			$this.prop("disabled", false).val($this.prop("placeholder"));
+		});
+		return false;
+	});
+}(jQuery, document));
+//]]>
+</script>
+
+<%+footer%>
+
