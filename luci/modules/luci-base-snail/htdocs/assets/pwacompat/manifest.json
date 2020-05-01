@@ -1,0 +1,28 @@
+{
+	"name": "OpenWrt by Snail",
+	"short_name": "OpenWrt",
+	"description": "OpenWrt by Snail",
+	"display": "standalone",
+	"start_url": "/cgi-bin/luci/",
+	"orientation": "portrait",
+	"theme_color": "#1565c0",
+	"background_color": "#1565c0",
+	"icons": [{
+			"src": "icons/icon-64.png",
+			"type": "image/png",
+			"sizes": "64x64"
+		}, {
+			"src": "icons/icon-128.png",
+			"type": "image/png",
+			"sizes": "128x128"
+		}, {
+			"src": "icons/icon-192.png",
+			"type": "image/png",
+			"sizes": "192x192"
+		}, {
+			"src": "icons/icon-256.png",
+			"type": "image/png",
+			"sizes": "256x256"
+		}
+	]
+}
