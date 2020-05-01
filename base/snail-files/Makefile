@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 include $(TOPDIR)/feeds/snail/snail.mk
 
 PKG_NAME:=snail-files
-PKG_VERSION:=$(shell date +3.%-m.%-d)
+PKG_VERSION:=$(shell TZ='Asia/Shanghai' date +3.%-m.%-d)
 PKG_RELEASE:=$(shell TZ='Asia/Shanghai' date +%X | sed 's/://g')
 
 PKG_FLAGS:=essential
