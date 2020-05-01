@@ -7,7 +7,7 @@
 #
 
 include $(TOPDIR)/rules.mk
-# include $(TOPDIR)/feeds/snail/snail.mk
+include $(TOPDIR)/feeds/snail/snail.mk
 
 PKG_NAME:=cloudreve
 PKG_VERSION:=3.0.0
