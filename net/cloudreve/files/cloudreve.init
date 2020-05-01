@@ -25,7 +25,7 @@ LOGFILE=/var/log/${PKG_NAME}.log
 PIDFILE=/var/run/${PKG_NAME}.pid
 
 WORKDIR=/app/cloudreve
-CFGFILE=${WORKDIR}/conf.ini
+CFGFILE=${WORKDIR}/cloudreve.ini
 DBSFILE=${WORKDIR}/cloudreve.db
 SAVEDIR=${WORKDIR}/uploads
 
@@ -60,23 +60,36 @@ start_instance()
 
 
 	[ -d "${SAVEDIR}" ] || mkdir -p $SAVEDIR
+	if [ ! -f "$CFGFILE" -o ! -s "$CFGFILE" ]; then
+		local SessionSecret=$(head -n 80 /dev/urandom | tr -dc A-Za-z0-9 | head -c 64 2>/dev/null)
+		local HashIDSalt=$(head -n 80 /dev/urandom | tr -dc A-Za-z0-9 | head -c 64 2>/dev/null)
+		cat > $CFGFILE <<-EOT
+			[System]
+			Mode = master
+			HashIDSalt = ${HashIDSalt}
+			SessionSecret = ${SessionSecret}
+			Listen = ${bind}:${port}
+		EOT
+	fi
 
 	export PROCD_UID=${user:-nobody}
 	if [ -n "${PROCD_UID}" ]; then
 		chown -R $PROCD_UID /app/cloudreve
 		chown -R $PROCD_UID /app/cloudreve/uploads
+		touch $CFGFILE && chmod 0666 $CFGFILE
 		touch $LOGFILE && chmod 0666 $LOGFILE
-		[ -f $CFGFILE ] && chmod 0666 $CFGFILE
 	fi
+
 	if [ -f $CFGFILE ]; then
 		sed -i '/Listen/d' $CFGFILE
-		echo "Listen = :${port}" >> $CFGFILE
+		echo "Listen = ${bind}:${port}" >> $CFGFILE
 	fi
 
 
 	# procd
 	procd_open_instance main
 	procd_set_param command ${PKG_PROG:-$PKG_NAME}
+	procd_append_param command -c $CFGFILE
 
 	procd_set_param user $PROCD_UID
 	procd_set_param pidfile $PIDFILE
