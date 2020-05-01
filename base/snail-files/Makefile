@@ -7,7 +7,7 @@
 #
 
 include $(TOPDIR)/rules.mk
-# include $(TOPDIR)/feeds/snail/snail.mk
+include $(TOPDIR)/feeds/snail/snail.mk
 
 PKG_NAME:=snail-files
 PKG_VERSION:=$(shell date +3.%-m.%-d)

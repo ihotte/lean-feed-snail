@@ -11,7 +11,7 @@ include $(TOPDIR)/feeds/snail/snail.mk
 
 PKG_NAME:=cloudreve
 PKG_VERSION:=3.0.0
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 
 ifeq ($(ARCH), x86_64)
