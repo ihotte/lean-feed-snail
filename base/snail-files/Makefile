@@ -56,11 +56,6 @@ define Package/$(PKG_NAME)/install
 
 	$(SED) 's/@PKG_VERSION@/$(PKG_VERSION)/g' $(1)/etc/uci-defaults/snail-files.sh
 
-ifeq ($(ARCH),aarch64)
-	$(INSTALL_DIR) $(1)/lib/network
-	$(STAGING_DIR_HOSTPKG)/bin/luac -s -o $(1)/lib/network/wireless.lua src/wireless.src.lua
-endif
-
 	(cd "$(1)" && find . -type d -exec chmod 0755 {} \;) || true;
 	(cd "$(1)" && find . -type f -exec chmod 0644 {} \;) || true;
 
