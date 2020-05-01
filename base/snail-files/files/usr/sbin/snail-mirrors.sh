@@ -1,6 +1,5 @@
 #!/bin/sh
 
-. /etc/openwrt_snail
 . /etc/openwrt_release
 . /lib/functions/snail.sh
 
@@ -102,44 +101,21 @@ tsinghua() {
 }
 
 
-#
-# https://mirrors.miwifi.io
-#
-miwifi() {
-	local MIRRORS="https://mirrors.miwifi.io/openwrt"
-	display_alert "" && display_alert "Switch repository to" "${MIRRORS}" "ext";
-	generate_distfeeds "$MIRRORS"
-	updateIndex
-}
-
-
-#
-# http://mirrors.anmpserver.com/openwrt/
-#
-snail() {
-	display_alert "" && \
-	display_alert "Please visit the website for details" "http://mirrors.anmpserver.com/openwrt/" "ext";
-}
-
-
 
 usage() {
 	[ -n "$@" ] && echo $@
-	echo "Usage: ${SCRIPT_NAME} [-o|--openwrt] [-t|--tencent] [-u|--ustc] [-a|--tsinghua] [-m|--miwifi] [-s|--snail] [-q|--quiet] [-h|--help]"
+	echo "Usage: ${SCRIPT_NAME} [-o|--openwrt] [-t|--tencent] [-u|--ustc] [-a|--tsinghua] [-q|--quiet] [-h|--help]"
 	exit 1
 }
 
 
-while getopts otuamshq opt; do
+while getopts otuahq opt; do
 	case $opt in
 		o) ACTION=openwrt ;;
 		t) ACTION=tencent ;;
 
 		u) ACTION=ustc ;;
 		a) ACTION=tsinghua ;;
-
-		m) ACTION=miwifi ;;
-		s) ACTION=snail ;;
 
 		q) QUIET=yes ;;
 		h) usage "" ;;
@@ -154,9 +130,6 @@ case "$ACTION" in
 
 	ustc) ustc ;;
 	tsinghua) tsinghua ;;
-
-	miwifi) miwifi ;;
-	snail) snail ;;
 
 	*) usage "" ;;
 esac

@@ -1,6 +1,5 @@
 #!/bin/sh
 
-. /etc/openwrt_snail
 . /etc/openwrt_release
 . /lib/functions/snail.sh
 
