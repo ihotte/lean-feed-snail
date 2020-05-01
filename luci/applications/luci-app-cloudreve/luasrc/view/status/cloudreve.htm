@@ -29,6 +29,12 @@ XHR.poll(5, '<%=url([[admin]], [[nas]], [[cloudreve]], [[status]])%>', null, fun
 		}
 	}
 });
+
+function openWebUI(path, port, host, protocol) {
+	var defaulthost = (protocol ? protocol : location.protocol) + '//' + window.location.hostname + (port ? ':' + port : '');
+	window.open((host ? host : defaulthost) + (path ? path : "/"));
+};
+
 //]]>
 </script>
 
