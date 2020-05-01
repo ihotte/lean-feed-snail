@@ -31,17 +31,16 @@ define Package/$(PKG_NAME)/description
 endef
 
 
-define Package/$(PKG_NAME)/conffiles
-/etc/default/motd
-endef
-
 define Build/Prepare
+	:;
 endef
 
 define Build/Configure
+	:;
 endef
 
 define Build/Compile
+	:;
 endef
 
 
