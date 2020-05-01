@@ -65,8 +65,12 @@ start_instance()
 	if [ -n "${PROCD_UID}" ]; then
 		chown -R $PROCD_UID /app/cloudreve
 		chown -R $PROCD_UID /app/cloudreve/uploads
-		touch $CFGFILE && chmod 0666 $CFGFILE
 		touch $LOGFILE && chmod 0666 $LOGFILE
+		[ -f $CFGFILE ] && chmod 0666 $CFGFILE
+	fi
+	if [ -f $CFGFILE ]; then
+		sed -i '/Listen/d' $CFGFILE
+		echo "Listen = :${port}" >> $CFGFILE
 	fi
 
 
