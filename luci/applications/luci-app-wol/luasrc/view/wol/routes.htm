@@ -1,0 +1,84 @@
+<%#
+ Copyright 2008-2009 Steven Barth <steven@midlink.org>
+ Copyright 2008-2015 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	local ip = require "luci.ip"
+	local snail = require "luci.snail"
+
+	local mac_hints = { }
+	luci.sys.net.mac_hints(function (mac, name)
+		mac_hints[#mac_hints + 1] = "\"#mac-%s\": \"%s\"" % {string.gsub(mac:lower(), ":", "-"), name}
+	end)
+	mac_hints = table.concat(mac_hints or {}, ",")
+-%>
+
+<style type="text/css">
+	.monospace,
+	.cbi-input-select {
+		font-family: 'Microsoft YaHei Mono', 'Courier New', monospace;
+	}
+
+	.cbi-rowstyle-1:hover,
+	.cbi-rowstyle-2:hover {
+		color: #000; background-color: #b2c8d4;
+	}
+
+	.table .tr > .th:first-child,
+	.table .tr > .td:first-child {
+		text-align: center;
+	}
+</style>
+
+<div class="cbi-section">
+	<legend>ARP</legend>
+	<div class="cbi-section-descr"><%:The following rules are currently active on this system.%></div>
+	<div class="cbi-section-node">
+		<div class="table">
+			<div class="tr table-titles">
+				<div class="th">ID</div>
+				<div class="th"><%_<abbr title="Internet Protocol Version 4">IPv4</abbr>-Address%></div>
+				<div class="th"><%_<abbr title="Media Access Control">MAC</abbr>-Address%></div>
+				<div class="th"><%:Hostname%></div>
+				<div class="th"><%:Interface%></div>
+				<div class="th"><%:Action%></div>
+			</div>
+
+			<% local i = 0; snail.net.arptable(function (e) if (e["HW address"] == "00:00:00:00:00:00") then return else i = i + 1 end%>
+				<div class="tr cbi-rowstyle-<%=((i%2 == 1) and 1 or 2)%>" onclick="add_arp_helper(this)">
+					<div class="td"><%=i%></div>
+					<div class="td monospace"><%=e["IP address"]%></div>
+					<div class="td field-mac monospace"><%=e["HW address"]:upper()%></div>
+					<div class="td field-hostname monospace" id="mac-<%=(string.gsub(e["HW address"]:lower(), ":", "-"))%>">--</div>
+					<div class="td field-device monospace"><%=e["Device"]%></div>
+					<div class="td">
+						<input type="button" class="cbi-button cbi-button-action" value=" <%:选择%> ">
+					</div>
+				</div>
+			<% end) %>
+		</div>
+	</div>
+</div>
+
+
+
+<script type="text/javascript">
+	function add_arp_helper(obj) {
+		var iface = obj.getElementsByClassName('field-device')[0].innerText;
+		var mac = obj.getElementsByClassName('field-mac')[0].innerText;
+		document.getElementById('cbid.wol.1.iface').value = iface
+		document.getElementById('cbid.wol.1.mac').value = mac
+		document.getElementById('cbi.combobox.cbid.wol.1.mac').value = mac
+	}
+
+	$(function() {
+		var mac_hints = {<%=mac_hints%>};
+		$.each(mac_hints, function (i, v) {
+			$(i).html(v);
+		});
+	});
+</script>
+
+
