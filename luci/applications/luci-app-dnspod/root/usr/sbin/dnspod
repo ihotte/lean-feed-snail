@@ -1,0 +1,238 @@
+#!/bin/sh
+#
+# Copyright (C) 2006-2019 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+# dnspod - scripts help ali ddns
+#
+. ${IPKG_INSTROOT}/lib/functions/snail.sh
+export PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+
+NAME=dnspod
+PKG_NAME=$NAME
+
+SECTION=${1:-default}
+LOGFILE=/var/log/$NAME.log
+
+
+NS1=f1g1ns1.dnspod.net
+NS2=f1g1ns2.dnspod.net
+
+
+loger()
+{
+	local time=$(date +'%Y-%m-%d %H:%M:%S')
+	echo "[$time]:[$SECTION] $1" | tee -a $LOGFILE
+	_logger_user "[$SECTION] $1" >/dev/null
+}
+
+
+uci_get_by_name() {
+	local ret=$(uci get $NAME.$1.$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+uci_bool_by_name() {
+	case "$(uci_get_by_name $1 $2)" in
+		1|on|true|yes|enabled) return 0;;
+	esac
+	return 1
+}
+
+intelnetip()
+{
+	local tmp_ip=""
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`curl -4 -sL --connect-timeout 3 ns1.dnspod.net:6666`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`curl -4 -sL --connect-timeout 3 members.3322.org/dyndns/getip`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`curl -4 -sL --connect-timeout 3 14.215.150.17:6666`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`curl -4 -sL --connect-timeout 3 whatismyip.akamai.com`
+	fi
+	echo -n $tmp_ip
+}
+
+resolve2ip() {
+	# resolve2ip domain<string>
+	local domain=$1
+	local tmp_ip=""
+
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`nslookup $domain ${NS1} 2>/dev/null | sed '/^Server/d; /#53$/d' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | tail -n1`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`nslookup $domain ${NS2} 2>/dev/null | sed '/^Server/d; /#53$/d' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | tail -n1`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`nslookup $domain 114.114.114.114 2>/dev/null | sed '/^Server/d; /#53$/d' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | tail -n1`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`nslookup $domain 114.114.115.115 2>/dev/null | sed '/^Server/d; /#53$/d' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | tail -n1`
+	fi
+	if [ "z$tmp_ip" == "z" ]; then
+		tmp_ip=`curl -4 -sL --connect-timeout 3 "119.29.29.29/d?dn=$domain"`
+	fi
+	echo -n $tmp_ip
+}
+
+
+check_ddns() {
+	loger "ROUTER-IP: ${ip}"
+	if [ "z$ip" == "z" ]; then
+		loger "ERROR, cant get ROUTER-IP ..."
+		return 0
+	fi
+
+	local current_ip=$(resolve2ip "$domain_sub.$domain")
+	if [ "z$current_ip" == "z" ]; then
+		record_id='' # NO Resolve IP Means new Record_ID
+	fi
+
+	loger "DOMAIN-IP: ${current_ip}"
+	if [ "z$ip" == "z$current_ip" ]; then
+		loger "IP dont need UPDATE ..."
+		return 0
+	else
+		loger "UPDATING ..."
+		return 1
+	fi
+}
+
+
+urlencode() {
+	# urlencode url<string>
+	local out=''
+	for c in $(echo -n $1 | sed 's/[^\n]/&\n/g'); do
+		case $c in
+			[a-zA-Z0-9._-]) out="$out$c" ;;
+			*) out="$out$(printf '%%%02X' "'$c")" ;;
+		esac
+	done
+	echo -n $out
+}
+
+
+get_recordid() {
+	sed 's/"records":/\n/g' | grep 'line_id' | \
+	sed -e 's/,/\n/g' -e 's/{/\n/g' | \
+	sed -n 's/.*id[^0-9]*\([0-9]*\).*/\1\n/p' | \
+	sort -ru | sed /^$/d
+}
+
+
+get_recordid_2() {
+	sed -e 's/,/\n/g' -e 's/{/\n/g' | \
+	sed -n 's/.*id[^0-9]*\([0-9]*\).*/\1\n/p' | \
+	sort -ru | sed /^$/d
+}
+
+
+# 发送请求
+send_request() {
+	local action="$1"
+	local extra_options="$2"
+	local common_options="--data \"login_token=${app_key},${app_secret}\" --data \"format=json\" --data \"lang=en\""
+	eval "curl -4 -sSL -ks --connect-timeout 5 -X POST https://dnsapi.cn/${action} ${common_options} ${extra_options}"
+}
+
+
+# 查询 RID
+query_recordid() {
+	local extra_options="--data-urlencode \"domain=${domain}\" --data-urlencode \"sub_domain=${domain_sub}\""
+	send_request "Record.List" "${extra_options}"
+}
+
+
+# 更新记录
+update_record() {
+	local extra_options="--data-urlencode \"domain=${domain}\" --data-urlencode \"sub_domain=${domain_sub:-unknown}\""
+	extra_options="${extra_options} --data-urlencode \"record_id=${1}\" --data-urlencode \"record_line=默认\" --data-urlencode \"value=${ip}\""
+	send_request "Record.Ddns"  "${extra_options}"
+}
+
+
+# 添加记录
+add_record() {
+	local extra_options="--data-urlencode \"domain=${domain}\" --data-urlencode \"sub_domain=${domain_sub:-unknown}\""
+	extra_options="${extra_options} --data-urlencode \"record_type=A\" --data-urlencode \"record_line=默认\" --data-urlencode \"value=${ip}\""
+	send_request "Record.Create" "${extra_options}"
+}
+
+
+# 删除记录
+del_record() {
+	local extra_options="--data-urlencode \"domain=${domain}\" --data-urlencode \"record_id=${1:-0}\""
+	send_request "Record.Remove" "${extra_options}" | grep -q 'successful'
+}
+
+
+
+do_ddns_record() {
+	if uci_bool_by_name $SECTION 'record_clean'; then
+		query_recordid | get_recordid | while read rr; do
+			loger "Clean record $domain_sub.$domain: $rr"
+			del_record $rr >/dev/null
+		done
+		record_id=''
+	fi
+
+	if [ "z$record_id" == "z" ]; then
+		record_id=`query_recordid | get_recordid`
+	fi
+
+	if [ "z$record_id" == "z" ]; then
+		record_id=`add_record | get_recordid_2`
+		loger "ADD record $record_id"
+	else
+		update_record $record_id >/dev/null 2>&1
+		loger "UPDATE record $record_id"
+	fi
+
+	if [ "z$record_id" == "z" ]; then
+		# failed
+		loger "# ERROR, Please Check Config/Time"
+	else
+		# save record_id
+		uci set $NAME.$SECTION.record_id=$record_id
+		uci commit $NAME
+		loger "# UPDATED ($ip)"
+	fi
+}
+
+clean_log() {
+	if [ $(cat $LOGFILE 2>/dev/null | wc -l) -ge 32 ]; then
+		rm -f $LOGFILE && touch $LOGFILE
+		loger "Log Cleaned"
+	fi
+}
+
+
+enabled=$(uci_get_by_name    $SECTION enabled)
+[ "$enabled" != "1" ] && return 1;
+
+
+app_key=$(uci_get_by_name    $SECTION app_key)
+app_secret=$(uci_get_by_name $SECTION app_secret)
+record_id=$(uci_get_by_name  $SECTION record_id)
+domain=$(uci_get_by_name     $SECTION domain)
+domain_sub=$(uci_get_by_name $SECTION domain_sub)
+
+iface=$(uci_get_by_name $SECTION interface)
+if [ "$iface" == "internet" -o "$iface" == "" ]; then
+	ip=$(intelnetip)
+else
+	ip=$(ubus call network.interface.$iface status | grep '"address"' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+fi
+
+
+clean_log
+check_ddns || do_ddns_record
+
+

@@ -1,0 +1,91 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2019 OpenWrt.org
+#
+# ubus call service list '{"name": "aliddns"}'
+# ubus call service list '{"name": "aliddns", "verbose": true}'
+#
+. ${IPKG_INSTROOT}/lib/functions/snail.sh
+export PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+
+
+START=90
+
+PKG_NAME=aliddns
+NE_TIPS='AliDDNS NOT ENABLED'
+
+
+update_records()
+{
+	local section="$1"
+	config_get_bool enabled "$section" enabled 0
+	[ $enabled -eq 0 ] && return 1
+	/usr/sbin/${PKG_NAME} "$section" >/dev/null 2>&1 &
+	return $?
+}
+
+
+start()
+{
+	config_load $PKG_NAME
+	config_get_bool enabled 'main' 'enabled' 0
+	[ $enabled -eq 0 ] && exit 1;
+
+	_logger "Starting ${PKG_NAME} ..."
+
+	config_get interval 'main' 'interval' 10
+	[ $interval -ge 10 -a $interval -le 60 ] || interval=10
+
+	sed -i "/${PKG_NAME:-unknown}.sh/d" /etc/crontabs/root >/dev/null 2>&1
+	echo "*/${interval} * * * * /etc/cron.d/${PKG_NAME}.sh >/dev/null 2>&1" >> /etc/crontabs/root
+	crontab /etc/crontabs/root
+
+	if [ -f /var/log/${PKG_NAME}.log ]; then
+		sed -i "/${NE_TIPS}/d" /var/log/${PKG_NAME}.log
+	fi
+
+	reload >/dev/null
+	RETVAL=$?
+
+	_logger "Starting ${PKG_NAME} ${RETVAL:-0} finished."
+	return ${RETVAL:-0}
+}
+
+
+stop()
+{
+	_logger "Stopping ${PKG_NAME} ..."
+
+	if [ -f /etc/crontabs/root ]; then
+		sed -i "/${PKG_NAME:-unknown}.sh/d" /etc/crontabs/root >/dev/null 2>&1
+		crontab /etc/crontabs/root
+	fi
+	RETVAL=$?
+
+	config_load $PKG_NAME
+	config_get_bool enabled 'main' 'enabled' 0
+	[ $enabled -eq 0 ] && { echo "${NE_TIPS}" > /var/log/${PKG_NAME}.log; }
+
+	_logger "Stopping ${PKG_NAME} ${RETVAL:-0} finished."
+	return ${RETVAL:-0}
+}
+
+
+restart()
+{
+	stop
+	sleep 1
+	start
+	return $?
+}
+
+reload()
+{
+	config_load $PKG_NAME
+	config_get_bool enabled 'main' 'enabled' 0
+	[ $enabled -eq 0 ] && exit 1
+
+	config_foreach update_records 'records'
+	return $?
+}
+
+

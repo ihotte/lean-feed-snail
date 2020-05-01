@@ -1,0 +1,5 @@
+
+config dnspod 'main'
+	option enabled '0'
+	option interval '10'
+
