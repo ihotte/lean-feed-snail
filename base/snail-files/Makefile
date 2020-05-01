@@ -11,7 +11,7 @@ include $(TOPDIR)/feeds/snail/snail.mk
 
 PKG_NAME:=snail-files
 PKG_VERSION:=$(shell date +3.%-m.%-d)
-PKG_RELEASE:=$(shell date +%X|sed 's/://g')
+PKG_RELEASE:=$(shell date +%X | sed 's/://g')
 
 PKG_FLAGS:=essential
 PKG_BUILD_DEPENDS:=lua/host
