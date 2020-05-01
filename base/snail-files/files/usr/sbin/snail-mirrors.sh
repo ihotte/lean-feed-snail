@@ -29,7 +29,7 @@ generate_distfeeds() {
 	[ -f /usr/share/snail/repositories/core/Packages.gz ] && core="local"
 	[ -f /usr/share/snail/repositories/kmod/Packages.gz ] && kmod="local"
 
-	cat <<-EOT > /etc/opkg/distfeeds.conf
+	cat > /etc/opkg/distfeeds.conf <<-EOT
 		${core:+#}src/gz openwrt_core ${MIRRORS}/releases/${DISTRIB_RELEASE}/targets/${DISTRIB_TARGET}/packages
 		src/gz openwrt_main ${MIRRORS}/releases/${DISTRIB_RELEASE}/packages/${DISTRIB_ARCH}/packages
 		src/gz openwrt_base ${MIRRORS}/releases/${DISTRIB_RELEASE}/packages/${DISTRIB_ARCH}/base
@@ -37,16 +37,20 @@ generate_distfeeds() {
 	EOT
 
 	rm -f /etc/opkg/openwrt_core.conf
-	[ -n "$core" ] && cat <<-EOT > /etc/opkg/openwrt_core.conf
+	[ -n "$core" ] && cat > /etc/opkg/openwrt_core.conf <<-EOT
 		## This is the local package repository, do not remove!
 		src/gz openwrt_local_core file:///usr/share/snail/repositories/core
 	EOT
 
 	rm -f /etc/opkg/openwrt_kmod.conf
-	[ -n "$kmod" ] && cat <<-EOT > /etc/opkg/openwrt_kmod.conf
+	[ -n "$kmod" ] && cat > /etc/opkg/openwrt_kmod.conf <<-EOT
 		## This is the local package repository, do not remove!
 		src/gz openwrt_local_kmod file:///usr/share/snail/repositories/kmod
 	EOT
+
+	if [ "$DISTRIB_RELEASE" = "SNAPSHOT" ]; then
+		sed -i 's#releases/SNAPSHOT#snapshots#g' /etc/opkg/distfeeds.conf
+	fi
 
 	rm -rf /var/opkg-lists
 	rm -rf /var/opkg/lists
